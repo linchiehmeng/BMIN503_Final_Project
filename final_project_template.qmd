@@ -1,7 +1,7 @@
 ---
 title: "Your Title"
 subtitle: "BMIN503/EPID600 Final Project"
-author: "FirstName LastName"
+author: "Lin-Chieh Meng"
 format: html
 editor: visual
 number-sections: true
