@@ -1,5 +1,5 @@
 ---
-title: "Association of statin use with sarcopenia in older adults: a cross-sectional study"
+title: "Association of Statin Use with Sarcopenia in Adults Under 60: A Cross-Sectional Study"
 subtitle: "BMIN503/EPID600 Final Project"
 author: "Lin-Chieh Meng"
 format: html
@@ -10,21 +10,35 @@ embed-resources: true
 
 ------------------------------------------------------------------------
 
-Use this template to complete your project throughout the course. Your Final Project presentation will be based on the contents of this document. Replace the title/name above and text below with your own, but keep the headers. Feel free to change the theme and other display settings, although this is not required.
-
 ## Overview {#sec-overview}
 
-Give a brief a description of your project and its goal(s), what data you are using to complete it, and what two faculty/staff in different fields you have spoken to about your project with a brief summary of what you learned from each person. Include a link to your final project GitHub repository.
+This project is a cross-sectional study using data from the CDC’s National Health and Nutrition Examination Survey (NHANES) 2017-2018 to assess the association between statin use and the risk of sarcopenia in adults under 60 years of age.
+
+To complete this project, I consulted with Dr. John Holmes, a Professor of Medical Informatics in Epidemiology, and Dr. Charles Leonard, an Associate Professor of Epidemiology. Dr. Holmes emphasized the importance of applying weights in the NHANES analysis to ensure that the results accurately represent the general population. Dr. Leonard advised me on handling missing data carefully and recommended using imputation methods for more robust analysis.
+
+The objectives of this study are to: 1) explore the characteristics of the population under 60 with sarcopenia, and 2) evaluate whether statin use impacts muscle health in younger individuals. The findings from this study could contribute to a better understanding of younger individuals with poor muscle health. Additionally, these findings could inform clinical decision-making related to the treatment of hyperlipidemia and guide the selection of therapeutic options for the prevention of cardiovascular disease in younger adults.
+
+Please find my Github Repository for the final project [here](https://github.com/linchiehmeng/BMIN503_Final_Project).
 
 ## Introduction {#sec-introduction}
 
-Describe the problem addressed, its significance, and some background to motivate the problem. This should extend what is in the @sec-overview.
+Statins, widely prescribed as first-line lipid-lowering agents for both primary and secondary prevention of atherosclerotic cardiovascular disease (1), have seen increasing use, with a prevalence ranging from 15.4% to 27.9% in recent years (2). Sarcopenia, characterized by significant declines in muscle mass, strength, and performance (3), affects both younger and older populations, leading to musculoskeletal impairment and limitations in physical activity (3). Emerging evidence suggests that statins may contribute to muscle dysfunction through mechanisms involving inflammation, apoptosis, and the regulation of myostatin (4), which are associated with muscle-related adverse events (5). Given the critical role of muscle health in maintaining mobility, concerns have been raised about the potential impact of statins on muscle health, including the development of sarcopenia.
 
-Explain why your problem is interdisciplinary, what fields can contribute to its understanding, and incorporate background related to what you learned from meeting with faculty/staff.
+Previous research has shown that statin use among older populations may increase the risk of developing sarcopenia (6). However, few studies have focused on whether this association also exists in younger individuals, or on the characteristics of muscle health within this population. With modern dietary habits and lifestyle changes, the incidence of hyperlipidemia (7)—and consequently, cardiovascular disease (8,9)—as well as poor muscle health related to sarcopenia (10), has begun to affect younger populations at higher rates. As the first-line pharmacological treatment for hyperlipidemia, statins play a crucial role in disease management. Therefore, it is important to understand whether statin use may adversely impact muscle health in younger adults and to provide insights that inform clinical decision-making for optimal treatment strategies.
+
+Therefore, this project aims to explore the characteristics of individuals under 60 with sarcopenia and to evaluate whether statin use impacts muscle health in this younger population. This research requires a multidisciplinary approach, integrating public health, pharmacology, and muscle disease studies, while also leveraging data science, epidemiology, and statistical expertise to design the study and draw valid conclusions.
 
 ## Methods {#sec-methods}
 
-Describe the data used and general methodological approach used to address the problem described in the @sec-introduction. Subsequently, incorporate full R code necessary to retrieve and clean data, and perform analysis. Be sure to include a description of code so that others (including your future self) can understand what you are doing and why.
+This cross-sectional study entailed a secondary analysis of data derived from the National Health and Nutrition Examination Survey (NHANES). NHANES was a cross-sectional survey conducted to assess the health and nutritional status of adults and children in the United States, providing robust external validity for extrapolating results to the broader U.S. population. The distinctiveness of NHANES lay in its integration of comprehensive interviews, physical examinations, and evaluations of physical activity and fitness. Since its inception in 1971, the survey had been conducted by the Centers for Disease Control and Prevention (CDC), with full documentation of its procedures and contents publicly available at <https://wwwn.cdc.gov/nchs/nhanes/Default.aspx> (accessed November 2024). This analysis specifically focused on participants from the 2017-2018 survey cycle.
+
+The study subjects included participants aged 20-59 years who had completed an interview screening, a full examination at a standardized mobile examination center, and body composition measurements using dual-energy X-ray absorptiometry (DEXA).
+
+The study identified the exposure as self-reported statin use. The outcome variable was sarcopenia, defined as appendicular lean mass in the lowest 20% stratified by age groups, according to definitions from previous studies. Several covariates were considered as confounders and were included in the adjustment model: gender, age, ethnicity, marital status, body mass index, smoking status, alcohol consumption, income status, nutritional status, physical activity level, general health condition, and comorbidities (i.e., hyperlipidemia, diabetes, hypertension, cardiovascular health status, chronic kidney disease, anxiety, depression, and history of fractures).
+
+This study conducted a descriptive analysis of the characteristics of participants with and without sarcopenia. Multivariate logistic regression models, adjusted for the potential confounders mentioned above, were used to examine the association between statin use and sarcopenia. Both crude and adjusted odds ratios with 95% confidence intervals were reported. Missing data were handled by an iterative algorithm similar to Multiple Imputation by Chained Equations, using a method that applied predictive mean matching with additive regression models and bootstrapping. For this analysis, a single imputation was performed. A two-tailed p-value of \<0.05 was considered statistically significant. However, due to the cross-sectional design of the study, the ability to draw definitive conclusions regarding the causal relationship between statin use and sarcopenia was limited.
+
+For the analysis, I first identified and loaded all the necessary libraries.
 
 ```{r}
 library(nhanesA)
@@ -32,10 +46,13 @@ library(haven)
 library(dplyr)
 library(purrr)
 library(boot) 
+library(Hmisc)
 ```
 
+I used the "nhanesA" package to access the 2017-2018 NHANES data (n=9254). Subsequently, I identified and extracted the variables required for the study, including the exposure, outcomes, and covariates.
+
 ```{r}
-#Data preparation - step 1
+#Step 1 - Data preparation 
 
 #Select the necessary variables from NHANES data 2017-2018
 #------------------------------Covariates------------------------------
@@ -127,54 +144,99 @@ data_list <- list(alq_data, bpq_data, cdq_data, dbq_data, demo_data, diq_data, d
 merged_data <- reduce(data_list, full_join, by = "id")
 ```
 
+I then cleaned the data by applying the inclusion and exclusion criteria. I identified all participants who took part in the NHANES screening during 2017-2018 and excluded those with missing outcome variables (i.e., those without DXA tests) (n=5540) and individuals under 20 years of age (n=1463). Since the NHANES 2017-2018 screening only conducted DXA tests for participants under 60 years old, my study population included individuals aged 20-59 (n=2251).
+
+For outcome identification, I first calculated appendicular muscle mass by summing the weights from both arms and legs. Individuals with appendicular muscle mass in the lowest 20% within their age group were classified as having sarcopenia, according to definitions from previous studies.
+
+I further labeled each covariate based on clinical insights. For certain variables, I retained the missing data for subsequent imputation analysis.
+
 ```{r}
-#Data cleaning - step 2
+#Step 2 - Data cleaning
 
 #Remove rows with missing values in any composite of the outcome variables
 merged_data <- merged_data %>%
   filter(!is.na(left_arm) & !is.na(left_leg) & !is.na(right_arm) & !is.na(right_leg))
 
-#Defining the outcome: individuals with appendicular lean weight in the lowest 20% are considered to have sarcopenia, according to definitions from previous studies
-merged_data <- merged_data %>%
-  mutate(
-    ALM = left_arm + left_leg + right_arm + right_leg,
-    sarcopenia = ifelse(ALM < quantile(ALM, 0.20, na.rm = TRUE), 1, 0)  
-  )
+#Exclude those aged<20 years
+merged_data <- merged_data[merged_data$age >= 20, ]
 
-#Set up the categories for each variable, categorizing missing values as an appropriate category based on the questionnaire
+#Create age groups
+merged_data <- merged_data %>%
+  mutate(age_group = case_when(
+    age >= 20 & age <= 29 ~ "1",
+    age >= 30 & age <= 39 ~ "2",
+    age >= 40 & age <= 49 ~ "3",
+    age >= 50 & age <= 59 ~ "4",
+  ))
+
+#Defining the outcome: individuals with appendicular lean weight in the lowest 20% stratified by age groups are considered to have sarcopenia, according to definitions from previous studies
+merged_data <- merged_data %>%
+  mutate(ALM = left_arm + left_leg + right_arm + right_leg) %>%
+  group_by(age_group) %>%
+  mutate(
+    sarcopenia = ifelse(ALM < quantile(ALM, 0.20, na.rm = TRUE), 1, 0)
+  ) %>%
+  ungroup()
+
+#Set up the categories for each variable, categorizing missing values as missing for later imputation
 overall_data <- merged_data %>%
   mutate(
-    alcohol_n = ifelse(!is.na(alcohol) & alcohol == 1, 1, 0),
-    HTN_n = ifelse(!is.na(HTN) & HTN == 1, 1, 0),
-    lipid_n = ifelse(!is.na(lipid) & lipid == 1, 1, 0),
+    alcohol_n = ifelse(alcohol == 1, 1, ifelse(is.na(alcohol), NA, 0)),
+    HTN_n = ifelse(HTN == 1, 1, ifelse(is.na(HTN), NA, 0)),
+    lipid_n = ifelse(lipid == 1, 1, ifelse(is.na(lipid), NA, 0)),
     cardio_n = ifelse(!is.na(cardio_health) & cardio_health == 1, 1, 0),
-    diet_n = ifelse(diet %in% c(5, 7, 9) | is.na(diet), 0, 1),
-    education_n = ifelse(education %in% c(3, 4, 5), 1, 0),
-    marital_n = ifelse(marital %in% c(1, 6), 1, 0),
-    income = ifelse(income %in% c(77, 99) | is.na(income), 0, income),
-    diabetes_n = ifelse(!is.na(diabetes) & diabetes == 1, 1, 0),
-    walk_dis_n = ifelse(!is.na(walk_dis) & walk_dis == 1, 1, 0),
+    diet_n = ifelse(diet %in% c(4, 5, 7, 9), 0, ifelse(is.na(diet), NA, 1)),
+    education_n = ifelse(education %in% c(3, 4, 5), 1, ifelse(is.na(education), NA, 0)),
+    marital_n = ifelse(marital %in% c(1, 6), 1, ifelse(is.na(marital), NA, 0)),
+    income = ifelse(income %in% c(77, 99), 0, income),
+    diabetes_n = ifelse(diabetes == 1, 1, ifelse(is.na(diabetes), NA, 0)),
+    walk_dis_n = ifelse(walk_dis == 1, 1, ifelse(is.na(walk_dis), NA, 0)),
     anxious_n = ifelse(!is.na(anxious) & anxious %in% c(1, 2, 3), 1, 0),
     depression_n = ifelse(!is.na(depression) & depression %in% c(1, 2, 3), 1, 0),
-    health_n = ifelse(!is.na(health) & health %in% c(1, 2, 3), 1, 0),
-    CKD_n = ifelse(!is.na(CKD) & CKD == 1, 1, 0),
-    fractured_wrist_n = ifelse
+    health_n = ifelse(health %in% c(1, 2, 3), 1, ifelse(is.na(health), NA, 0)),
+    CKD_n = ifelse(CKD == 1, 1, ifelse(is.na(CKD), NA, 0)),
+    fractured_n = ifelse
     (!is.na(fractured_hip) & fractured_hip == 1 |
      !is.na(fractured_wrist) & fractured_wrist == 1 |
      !is.na(fractured_spine) & fractured_spine == 1, 1, 0),
-    Physical_n = ifelse(!is.na(Physical) & Physical == 1, 1, 0),
-    statin_use_n = ifelse(!is.na(statin_use) & statin_use == 1, 1, 0),
-    smoking_n = ifelse(!is.na(Smoking) & Smoking %in% c(1, 2), 1, 0),
+    physical_n = ifelse(!is.na(Physical) & Physical == 1, 1, 0),
+    statin_use = ifelse(is.na(statin_use), 0, statin_use),
+    smoking_n = ifelse(Smoking %in% c(1, 2), 1, ifelse(is.na(Smoking), NA, 0)),
     BMI = ifelse(!is.na(Weight) & !is.na(Height), 
                  Weight * 0.45359237 / (Height * 2.54 / 100)^2, 
-                 NA)) %>%
+                 NA)
+  ) %>%
   mutate(
     BMI = ifelse(is.na(BMI) | BMI < 10, mean(BMI, na.rm = TRUE), BMI)
   )
+
+#Drop variables not needed for the analysis
+overall_data2 <- overall_data %>%
+  select(-alcohol, -HTN, -lipid, -cardio_health, -diet, -education, -marital, -age, -diabetes, -walk_dis, -anxious, -depression, -left_arm, -left_leg, -right_arm, -right_leg, -health, -CKD, -fractured_hip, -fractured_wrist, -fractured_spine, -Physical, -Drug, -Smoking, -Height, -Weight, -ALM)
 ```
 
-```{r}
+Missing data were handled using a method that applied predictive mean matching with additive regression models and bootstrapping. This process resulted in a final dataset with all variables prepared for analysis.
 
+```{r}
+#Step 3 - Imputation for the missing data
+impute_data <- aregImpute(
+  ~ income + alcohol_n + HTN_n + lipid_n + cardio_n + diet_n + 
+    education_n + marital_n + diabetes_n + walk_dis_n + health_n + 
+    CKD_n + smoking_n, 
+  data = overall_data2, 
+  n.impute = 1
+)
+
+# Extract the imputed columns as a data frame
+imputed_data <- impute.transcan(impute_data, imputation = 1, data = overall_data2, list.out = TRUE, pr = FALSE)
+imputed_data <- as.data.frame(imputed_data)
+
+# Combine the imputed data with non-imputed columns from the original dataset to obtain final dataset
+final_data <- overall_data2 %>%
+  select(-income, -alcohol_n, -HTN_n, -lipid_n, -cardio_n, -diet_n, 
+         -education_n, -marital_n, -diabetes_n, -walk_dis_n, -health_n, 
+         -CKD_n, -smoking_n) %>%
+  bind_cols(imputed_data) 
 ```
 
 ## Results {#sec-results}
@@ -184,3 +246,16 @@ Describe your results and include relevant tables, plots, and code/comments used
 ## Conclusion
 
 This the conclusion. The @sec-results can be invoked here.
+
+## References
+
+1.  Arnett DK, Blumenthal RS, Albert MA, et al. 2019 ACC/AHA Guideline on the Primary Prevention of Cardiovascular Disease: A Report of the American College of Cardiology/American Heart Association Task Force on Clinical Practice Guidelines. Circulation. 2019;140(11):e596-e646.
+2.  Jacobs JA, Addo DK, Zheutlin AR, et al. Prevalence of Statin Use for Primary Prevention of Atherosclerotic Cardiovascular Disease by Race, Ethnicity, and 10-Year Disease Risk in the US: National Health and Nutrition Examination Surveys, 2013 to March 2020. *JAMA Cardiol*. 2023;8(5):443-452.
+3.  Bielecka-Dabrowa A, Fabis J, Mikhailidis DP, et al. Prosarcopenic Effects of Statins May Limit Their Effectiveness in Patients with Heart Failure. Trends Pharmacol Sci. 2018;39(4):331-353.
+4.  Crisan E, Patil VK. Neuromuscular Complications of Statin Therapy. Curr Neurol Neurosci Rep. 2020;20(10):47.
+5.  Schwendner KI, Mikesky AE, Holt WS, Jr., Peacock M, Burr DB. Differences in muscle endurance and recovery between fallers and nonfallers, and between young and older women. J Gerontol A Biol Sci Med Sci. May 1997;52(3):M155-60.
+6.  Campins L, Camps M, Riera A, Pleguezuelos E, Yebenes JC, Serra-Prat M. Oral Drugs Related with Muscle Wasting and Sarcopenia. A Review. *Pharmacology*. 2017;99(1-2):1-8.
+7.  Liu LY, Aimaiti X, Zheng YY, et al. Epidemic trends of dyslipidemia in young adults: a real-world study including more than 20,000 samples. *Lipids Health Dis*. 2023;22(1):108.
+8.  Stone NJ, Smith SC Jr, Orringer CE, et al. Managing Atherosclerotic Cardiovascular Risk in Young Adults: JACC State-of-the-Art Review. *J Am Coll Cardiol*. 2022;79(8):819-836.
+9.  Zhang X, Chen Z, Fang A, et al. Trends in prevalence, risk factor control and medications in atherosclerotic cardiovascular disease among US Adults, 1999-2018. *Am J Prev Cardiol*. 2024;17:100634.
+10. Jung HN, Jung CH, Hwang YC. Sarcopenia in youth. *Metabolism*. 2023;144:155557.
