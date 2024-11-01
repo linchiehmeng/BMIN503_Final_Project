@@ -27,132 +27,154 @@ Explain why your problem is interdisciplinary, what fields can contribute to its
 Describe the data used and general methodological approach used to address the problem described in the @sec-introduction. Subsequently, incorporate full R code necessary to retrieve and clean data, and perform analysis. Be sure to include a description of code so that others (including your future self) can understand what you are doing and why.
 
 ```{r}
+library(nhanesA)
 library(haven)
 library(dplyr)
+library(purrr)
+library(boot) 
 ```
 
 ```{r}
-#Read the raw data file (NHANES 2017-2018) from my GitHub repository, where the raw data has been uploaded.
+#Data preparation - step 1
 
-alq_data <- read_xpt ("https://raw.githubusercontent.com/linchiehmeng/BMIN503_Final_Project/master/ALQ_J.XPT")
-
-bpq_data <- read_xpt ("https://raw.githubusercontent.com/linchiehmeng/BMIN503_Final_Project/master/BPQ_J.XPT")
-
-cdq_data <- read_xpt ("https://raw.githubusercontent.com/linchiehmeng/BMIN503_Final_Project/master/CDQ_J.XPT")
-
-dbq_data <- read_xpt ("https://raw.githubusercontent.com/linchiehmeng/BMIN503_Final_Project/master/DBQ_J.XPT")
-
-demo_data <- read_xpt ("https://raw.githubusercontent.com/linchiehmeng/BMIN503_Final_Project/master/DEMO_J.XPT")
-
-diq_data <- read_xpt ("https://raw.githubusercontent.com/linchiehmeng/BMIN503_Final_Project/master/DIQ_J.XPT")
-
-dlq_data <- read_xpt ("https://raw.githubusercontent.com/linchiehmeng/BMIN503_Final_Project/master/DLQ_J.XPT")
-
-dxx_data <- read_xpt ("https://raw.githubusercontent.com/linchiehmeng/BMIN503_Final_Project/master/DXX_J.XPT")
-
-hsq_data <- read_xpt ("https://raw.githubusercontent.com/linchiehmeng/BMIN503_Final_Project/master/HSQ_J.XPT")
-
-kiq_data <- read_xpt ("https://raw.githubusercontent.com/linchiehmeng/BMIN503_Final_Project/master/KIQ_U_J.XPT")
-
-osq_data <- read_xpt ("https://raw.githubusercontent.com/linchiehmeng/BMIN503_Final_Project/master/OSQ_J.XPT")
-
-paq_data <- read_xpt ("https://raw.githubusercontent.com/linchiehmeng/BMIN503_Final_Project/master/PAQ_J.XPT")
-
-rxq_data <- read_xpt ("https://raw.githubusercontent.com/linchiehmeng/BMIN503_Final_Project/master/RXQ_RX_J.XPT")
-
-smq_data <- read_xpt ("https://raw.githubusercontent.com/linchiehmeng/BMIN503_Final_Project/master/SMQ_J.XPT")
-
-whq_data <- read_xpt ("https://raw.githubusercontent.com/linchiehmeng/BMIN503_Final_Project/master/WHQ_J.XPT")
-```
-
-```{r}
-#Data cleaning - step 1
-#Select the necessary variables from each data file
-
+#Select the necessary variables from NHANES data 2017-2018
 #------------------------------Covariates------------------------------
-
 #Demography
-demo_data <- demo_data %>%
-  rename(id = SEQN, interview_status= RIDSTATR, gender= RIAGENDR, age = RIDAGEYR, race = RIDRETH3, education = DMDEDUC2, marital = DMDMARTL, income = INDHHIN2) %>%
-  select(id, interview_status, gender, age, race, education, marital, income )
+demo_data <- nhanes('DEMO_J', translate=FALSE) %>%
+  rename(id = SEQN, gender= RIAGENDR, age = RIDAGEYR, race = RIDRETH3, education = DMDEDUC2, marital = DMDMARTL, income = INDHHIN2, exam_weight=WTMEC2YR) %>%
+  select(id, gender, age, race, education, marital, income, exam_weight )
 
 #Alcohol use
-alq_data <- alq_data %>%
+alq_data <- nhanes('ALQ_J', translate=FALSE) %>%
   rename(id = SEQN, alcohol = ALQ111) %>%
   select(id, alcohol)
 
 #Blood pressure and cholesterol 
-bpq_data <- bpq_data %>%
-  rename(id = SEQN, HPT = BPQ020, lipid = BPQ080) %>%
-  select(id, HPT, lipid)
+bpq_data <- nhanes('BPQ_J', translate=FALSE) %>%
+  rename(id = SEQN, HTN = BPQ020, lipid = BPQ080) %>%
+  select(id, HTN, lipid)
 
 #Cardiovascular health
-cdq_data <- cdq_data %>%
+cdq_data <- nhanes('CDQ_J', translate=FALSE) %>%
   rename(id = SEQN, cardio_health = CDQ001) %>%
   select(id, cardio_health)
 
 #Diet behavior & nutrition
-dbq_data <- dbq_data %>%
+dbq_data <- nhanes('DBQ_J', translate=FALSE) %>%
   rename(id = SEQN, diet= DBQ700) %>%
   select(id, diet)
 
 #Diabetes
-diq_data <- diq_data %>%
+diq_data <- nhanes('DIQ_J', translate=FALSE) %>%
   rename(id = SEQN, diabetes= DIQ010) %>%
   select(id, diabetes)
 
 #Disability & anxious & depression
-dlq_data <- dlq_data %>%
+dlq_data <- nhanes('DLQ_J', translate=FALSE) %>%
   rename(id = SEQN, walk_dis= DLQ050, anxious = DLQ130, depression = DLQ170 ) %>%
   select(id, walk_dis, anxious, depression)
 
 #Self-reported current health status
-hsq_data <- hsq_data %>%
+hsq_data <- nhanes('HSQ_J', translate=FALSE) %>%
   rename(id = SEQN, health= HSD010) %>%
   select(id, health)
 
 #Kidney disease
-kiq_data <- kiq_data %>%
+kiq_data <- nhanes('KIQ_U_J', translate=FALSE) %>%
   rename(id = SEQN, CKD= KIQ022) %>%
   select(id, CKD)
 
 #Osteoporosis
-osq_data <- osq_data %>%
+osq_data <- nhanes('OSQ_J', translate=FALSE) %>%
   rename(id = SEQN, fractured_hip= OSQ010A, fractured_wrist= OSQ010B , fractured_spine= OSQ010C) %>%
   select(id, fractured_hip, fractured_wrist, fractured_spine)
 
 #Physical activity
-paq_data <- paq_data %>%
+paq_data <- nhanes('PAQ_J', translate=FALSE) %>%
   rename(id = SEQN, Physical= PAQ605 ) %>%
   select(id, Physical)
 
 #Smoking
-smq_data <- smq_data %>%
+smq_data <- nhanes('SMQ_J', translate=FALSE) %>%
   rename(id = SEQN, Smoking= SMQ040) %>%
   select(id, Smoking)
 
 #Height & Weight
-whq_data <- whq_data %>%
+whq_data <- nhanes('WHQ_J', translate=FALSE) %>%
   rename(id = SEQN, Height= WHD010, Weight = WHD020) %>%
   select(id, Height, Weight)
 
 #---------------------------Exposure-------------------------------
-
 #Statin use
-rxq_data <- rxq_data %>%
+rxq_data <- nhanes('RXQ_RX_J', translate=FALSE) %>%
   rename(id = SEQN, Drug= RXDDRUG) %>%
   select(id, Drug)
 
 statin_users <- rxq_data  %>%
   filter(grepl("STATIN", Drug, ignore.case = TRUE)) %>%
   distinct(id, .keep_all = TRUE)
-
+statin_users$statin_use <- 1
 #---------------------------Outcome-------------------------------
 
 #Appendicular muscle mass
-dxx_data <- dxx_data %>%
+dxx_data <-  nhanes('DXX_J', translate=FALSE) %>%
   rename(id = SEQN, left_arm= DXDLALE , left_leg = DXDLLLE,  right_arm = DXDRALE,  right_leg = DXDRLLE ) %>%
   select(id, left_arm, left_leg, right_arm, right_leg)
+
+#---------------------Merge all data frames by id----------------------
+data_list <- list(alq_data, bpq_data, cdq_data, dbq_data, demo_data, diq_data, dlq_data, dxx_data, hsq_data, kiq_data, osq_data, paq_data, statin_users, smq_data, whq_data)
+
+merged_data <- reduce(data_list, full_join, by = "id")
+```
+
+```{r}
+#Data cleaning - step 2
+
+#Remove rows with missing values in any composite of the outcome variables
+merged_data <- merged_data %>%
+  filter(!is.na(left_arm) & !is.na(left_leg) & !is.na(right_arm) & !is.na(right_leg))
+
+#Defining the outcome: individuals with appendicular lean weight in the lowest 20% are considered to have sarcopenia, according to definitions from previous studies
+merged_data <- merged_data %>%
+  mutate(
+    ALM = left_arm + left_leg + right_arm + right_leg,
+    sarcopenia = ifelse(ALM < quantile(ALM, 0.20, na.rm = TRUE), 1, 0)  
+  )
+
+#Set up the categories for each variable, categorizing missing values as an appropriate category based on the questionnaire
+overall_data <- merged_data %>%
+  mutate(
+    alcohol_n = ifelse(!is.na(alcohol) & alcohol == 1, 1, 0),
+    HTN_n = ifelse(!is.na(HTN) & HTN == 1, 1, 0),
+    lipid_n = ifelse(!is.na(lipid) & lipid == 1, 1, 0),
+    cardio_n = ifelse(!is.na(cardio_health) & cardio_health == 1, 1, 0),
+    diet_n = ifelse(diet %in% c(5, 7, 9) | is.na(diet), 0, 1),
+    education_n = ifelse(education %in% c(3, 4, 5), 1, 0),
+    marital_n = ifelse(marital %in% c(1, 6), 1, 0),
+    income = ifelse(income %in% c(77, 99) | is.na(income), 0, income),
+    diabetes_n = ifelse(!is.na(diabetes) & diabetes == 1, 1, 0),
+    walk_dis_n = ifelse(!is.na(walk_dis) & walk_dis == 1, 1, 0),
+    anxious_n = ifelse(!is.na(anxious) & anxious %in% c(1, 2, 3), 1, 0),
+    depression_n = ifelse(!is.na(depression) & depression %in% c(1, 2, 3), 1, 0),
+    health_n = ifelse(!is.na(health) & health %in% c(1, 2, 3), 1, 0),
+    CKD_n = ifelse(!is.na(CKD) & CKD == 1, 1, 0),
+    fractured_wrist_n = ifelse
+    (!is.na(fractured_hip) & fractured_hip == 1 |
+     !is.na(fractured_wrist) & fractured_wrist == 1 |
+     !is.na(fractured_spine) & fractured_spine == 1, 1, 0),
+    Physical_n = ifelse(!is.na(Physical) & Physical == 1, 1, 0),
+    statin_use_n = ifelse(!is.na(statin_use) & statin_use == 1, 1, 0),
+    smoking_n = ifelse(!is.na(Smoking) & Smoking %in% c(1, 2), 1, 0),
+    BMI = ifelse(!is.na(Weight) & !is.na(Height), 
+                 Weight * 0.45359237 / (Height * 2.54 / 100)^2, 
+                 NA)) %>%
+  mutate(
+    BMI = ifelse(is.na(BMI) | BMI < 10, mean(BMI, na.rm = TRUE), BMI)
+  )
+```
+
+```{r}
+
 ```
 
 ## Results {#sec-results}
