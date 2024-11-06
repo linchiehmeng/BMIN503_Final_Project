@@ -16,7 +16,7 @@ This project is a cross-sectional study using data from the CDC’s National Hea
 
 To complete this project, I consulted with Dr. John Holmes, a Professor of Medical Informatics in Epidemiology, and Dr. Charles Leonard, an Associate Professor of Epidemiology. Dr. Holmes emphasized the importance of applying weights in the NHANES analysis to ensure that the results accurately represent the general population. Dr. Leonard advised me on handling missing data carefully and recommended using imputation methods for more robust analysis.
 
-The objectives of this study are to: 1) explore the characteristics of the population under 60 with sarcopenia, and 2) evaluate whether statin use impacts muscle health in younger individuals. The findings from this study could contribute to a better understanding of younger individuals with poor muscle health. Additionally, these findings could inform clinical decision-making related to the treatment of hyperlipidemia and guide the selection of therapeutic options for the prevention of cardiovascular disease in younger adults.
+The objectives of this study are to: 1) explore the characteristics of individuals under 60 with sarcopenia, 2) examine the characteristics of individuals under 60 using statins, and 3) evaluate whether statin use impacts muscle health in younger adults. The findings from this study could enhance our understanding of poor muscle health in younger individuals. Additionally, these results could inform clinical decision-making regarding hyperlipidemia treatment and guide the selection of therapeutic options for cardiovascular disease prevention in younger adults.
 
 Please find my Github Repository for the final project [here](https://github.com/linchiehmeng/BMIN503_Final_Project).
 
@@ -26,7 +26,7 @@ Statins, widely prescribed as first-line lipid-lowering agents for both primary 
 
 Previous research has shown that statin use among older populations may increase the risk of developing sarcopenia (6). However, few studies have focused on whether this association also exists in younger individuals, or on the characteristics of muscle health within this population. With modern dietary habits and lifestyle changes, the incidence of hyperlipidemia (7)—and consequently, cardiovascular disease (8,9)—as well as poor muscle health related to sarcopenia (10), has begun to affect younger populations at higher rates. As the first-line pharmacological treatment for hyperlipidemia, statins play a crucial role in disease management. Therefore, it is important to understand whether statin use may adversely impact muscle health in younger adults and to provide insights that inform clinical decision-making for optimal treatment strategies.
 
-Therefore, this project aims to explore the characteristics of individuals under 60 with sarcopenia and to evaluate whether statin use impacts muscle health in this younger population. This research requires a multidisciplinary approach, integrating public health, pharmacology, and muscle disease studies, while also leveraging data science, epidemiology, and statistical expertise to design the study and draw valid conclusions.
+Therefore, this project aims to explore the characteristics of individuals under 60 with sarcopenia, to examine the characteristics of individuals under 60 using statins, and to evaluate whether statin use impacts muscle health in this younger population. This research requires a multidisciplinary approach, integrating public health, pharmacology, and muscle disease studies, while also leveraging data science, epidemiology, and statistical expertise to design the study and draw valid conclusions.
 
 ## Methods {#sec-methods}
 
@@ -47,6 +47,10 @@ library(dplyr)
 library(purrr)
 library(boot) 
 library(Hmisc)
+library(tableone)
+library(labelled)
+library(ggplot2)
+library(survey)
 ```
 
 I used the "nhanesA" package to access the 2017-2018 NHANES data (n=9254). Subsequently, I identified and extracted the variables required for the study, including the exposure, outcomes, and covariates.
@@ -146,7 +150,7 @@ merged_data <- reduce(data_list, full_join, by = "id")
 
 I then cleaned the data by applying the inclusion and exclusion criteria. I identified all participants who took part in the NHANES screening during 2017-2018 and excluded those with missing outcome variables (i.e., those without DXA tests) (n=5540) and individuals under 20 years of age (n=1463). Since the NHANES 2017-2018 screening only conducted DXA tests for participants under 60 years old, my study population included individuals aged 20-59 (n=2251).
 
-For outcome identification, I first calculated appendicular muscle mass by summing the weights from both arms and legs. Individuals with appendicular muscle mass in the lowest 20% within their age group were classified as having sarcopenia, according to definitions from previous studies.
+For outcome identification, I first calculated appendicular muscle mass by summing the weights from both arms and legs. Individuals with appendicular muscle mass in the lowest 20% within their age group and gender were classified as having sarcopenia, according to definitions from previous studies.
 
 I further labeled each covariate based on clinical insights. For certain variables, I retained the missing data for subsequent imputation analysis.
 
@@ -169,10 +173,10 @@ merged_data <- merged_data %>%
     age >= 50 & age <= 59 ~ "4",
   ))
 
-#Defining the outcome: individuals with appendicular lean weight in the lowest 20% stratified by age groups are considered to have sarcopenia, according to definitions from previous studies
+#Defining the outcome: individuals with appendicular lean weight in the lowest 20% stratified by age groups and gender are considered to have sarcopenia, according to definitions from previous studies
 merged_data <- merged_data %>%
   mutate(ALM = left_arm + left_leg + right_arm + right_leg) %>%
-  group_by(age_group) %>%
+  group_by(age_group, gender) %>% 
   mutate(
     sarcopenia = ifelse(ALM < quantile(ALM, 0.20, na.rm = TRUE), 1, 0)
   ) %>%
@@ -207,7 +211,8 @@ overall_data <- merged_data %>%
                  NA)
   ) %>%
   mutate(
-    BMI = ifelse(is.na(BMI) | BMI < 10, mean(BMI, na.rm = TRUE), BMI)
+    BMI = ifelse(is.na(BMI) | BMI < 10, mean(BMI, na.rm = TRUE), BMI),
+    BMI = ifelse(is.na(BMI) | BMI >60, mean(BMI, na.rm = TRUE), BMI)
   )
 
 #Drop variables not needed for the analysis
@@ -218,7 +223,7 @@ overall_data2 <- overall_data %>%
 Missing data were handled using a method that applied predictive mean matching with additive regression models and bootstrapping. This process resulted in a final dataset with all variables prepared for analysis.
 
 ```{r}
-#Step 3 - Imputation for the missing data
+#Step 3 - Imputation for the missing data and label the covariates
 impute_data <- aregImpute(
   ~ income + alcohol_n + HTN_n + lipid_n + cardio_n + diet_n + 
     education_n + marital_n + diabetes_n + walk_dis_n + health_n + 
@@ -237,11 +242,103 @@ final_data <- overall_data2 %>%
          -education_n, -marital_n, -diabetes_n, -walk_dis_n, -health_n, 
          -CKD_n, -smoking_n) %>%
   bind_cols(imputed_data) 
+
+# Label the covariates
+final_data$sarcopenia <- factor(final_data$sarcopenia, levels = c(0, 1), labels = c("Without Sarcopenia", "With Sarcopenia"))
+final_data$gender <- factor(final_data$gender, levels = c(1, 2), labels = c("Male", "Female"))
+final_data$race <- factor(final_data$race, levels = c(1, 2, 3, 4, 6, 7),
+                          labels = c("Mexican American", "Other Hispanic", "Non-Hispanic White", 
+                                     "Non-Hispanic Black", "Non-Hispanic Asian", "Other Race"))
+final_data$age_group <- factor(final_data$age_group, levels = c("1", "2", "3", "4"),
+                               labels = c("20-29 years", "30-39 years", "40-49 years", "50-59 years"))
+final_data$income <- factor(final_data$income, levels = 0:15,
+                            labels = c("Refused to Answer", "$0 to $4,999", "$5,000 to $9,999", 
+                                       "$10,000 to $14,999", "$15,000 to $19,999", 
+                                       "$20,000 to $24,999", "$25,000 to $34,999", 
+                                       "$35,000 to $44,999", "$45,000 to $54,999", 
+                                       "$55,000 to $64,999", "$65,000 to $74,999", 
+                                       "Missing", "$20,000 and Over", "Under $20,000", 
+                                       "$75,000 to $99,999", "$100,000 and Over"))
+final_data$statin_use <- factor(final_data$statin_use, levels = c(0, 1), labels = c("No Statin Use", "Statin Use"))
+final_data$anxious_n <- factor(final_data$anxious_n, levels = c(0, 1), labels = c("No History of Anxiety", "History of Anxiety"))
+final_data$depression_n <- factor(final_data$depression_n, levels = c(0, 1), labels = c("No History of Depression", "History of Depression"))
+final_data$fractured_n <- factor(final_data$fractured_n, levels = c(0, 1), labels = c("No History of Fracture", "History of Fracture"))
+final_data$physical_n <- factor(final_data$physical_n, levels = c(0, 1), labels = c("Low Physical Activity", "High Physical Activity"))
+final_data$alcohol_n <- factor(final_data$alcohol_n, levels = c(0, 1), labels = c("No Alcohol Use", "Alcohol Use"))
+final_data$HTN_n <- factor(final_data$HTN_n, levels = c(0, 1), labels = c("No Hypertension", "Hypertension"))
+final_data$lipid_n <- factor(final_data$lipid_n, levels = c(0, 1), labels = c("No Hyperlipidemia", "Hyperlipidemia"))
+final_data$education_n <- factor(final_data$education_n, levels = c(0, 1), labels = c("Low Education Level", "High Education Level"))
+final_data$marital_n <- factor(final_data$marital_n, levels = c(0, 1), labels = c("Not Married or Cohabiting", "Married or Cohabiting"))
+final_data$smoking_n <- factor(final_data$smoking_n, levels = c(0, 1), labels = c("Non-Smoker", "Smoker"))
+final_data$diet_n <- factor(final_data$diet_n, levels = c(0, 1), labels = c("Unhealthy Diet", "Healthy Diet"))
+final_data$health_n <- factor(final_data$health_n, levels = c(0, 1), labels = c("Self-Perceived Poor Health", "Self-Perceived Good Health"))
+final_data$cardio_n <- factor(final_data$cardio_n, levels = c(0, 1), labels = c("No Cardiovascular Disease", "Cardiovascular Disease"))
+final_data$diabetes_n <- factor(final_data$diabetes_n, levels = c(0, 1), labels = c("No Diabetes", "Diabetes"))
+final_data$walk_dis_n <- factor(final_data$walk_dis_n, levels = c(0, 1), labels = c("No Walking Difficulty", "Walking Difficulty"))
+final_data$CKD_n <- factor(final_data$CKD_n, levels = c(0, 1), labels = c("No Chronic Kidney Disease", "Chronic Kidney Disease"))
 ```
 
 ## Results {#sec-results}
 
-Describe your results and include relevant tables, plots, and code/comments used to obtain them. You may refer to the @sec-methods as needed. End with a brief conclusion of your findings related to the question you set out to address. You can include references if you'd like, but this is not required.
+Baseline characteristic of participants with or without sarcopenia
+
+```{r}
+# Create crude Table 1 to show the characteristics stratified by sarcopenia status
+vars <- c("gender", "age_group", "BMI",  "race", "income", "education_n", "marital_n",                  "physical_n",  "alcohol_n",  "smoking_n", "diet_n", "health_n", "walk_dis_n", 
+          "HTN_n", "lipid_n", "cardio_n", "diabetes_n",  "CKD_n", "statin_use")
+factorVars <- setdiff(vars, "BMI")
+
+table1 <- CreateTableOne(vars = vars, strata = "sarcopenia", data = final_data, factorVars = factorVars, test = FALSE)
+
+print(table1, quote = FALSE, noSpaces = TRUE)
+```
+
+```{r}
+# Create weighted Table 1 to show the characteristics stratified by sarcopenia status
+survey_design <- svydesign(ids = ~1, data = final_data, weights = ~exam_weight)
+
+table1_weight <- svyCreateTableOne(
+  vars = vars,
+  strata = "sarcopenia",
+  data = survey_design,
+  factorVars = factorVars,
+  test = FALSE,
+)
+
+print(table1_weight, quote = FALSE, noSpaces = TRUE)
+```
+
+Baseline characteristic of participants with or without using statins
+
+```{r}
+#Create plots to show the characteristics stratified by statins use status
+
+# Define a vector of variable names
+categorical_vars <- c("gender", "age_group", "race", "income", "education_n", "marital_n", 
+                      "physical_n", "alcohol_n", "smoking_n", "diet_n", "health_n", 
+                      "walk_dis_n", "HTN_n", "lipid_n", "cardio_n", "diabetes_n", "CKD_n")
+
+# Create bar plots showing proportions for each categorical variable by statin use
+for (var in categorical_vars) {
+  p <- final_data %>%
+    group_by(statin_use, .data[[var]]) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    mutate(proportion = count / sum(count)) %>%
+    ggplot(aes_string(x = "statin_use", y = "proportion", fill = var)) +
+    geom_bar(stat = "identity", position = "fill") +
+    labs(title = paste("Proportion of", var, "by Statin Use"), x = "Statin Use", y = "Proportion", fill = var) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    scale_y_continuous(labels = scales::percent_format())
+  print(p)
+}
+
+# Create a violin plot for BMI with an overlay of box plot to show density and summary stats
+ggplot(final_data, aes(x = statin_use, y = BMI, fill = statin_use)) +
+  geom_violin(trim = FALSE, alpha = 0.5) +
+  geom_boxplot(width = 0.1, position = position_dodge(0.9), outlier.shape = NA) +
+  labs(title = "Distribution of BMI by Statin Use", x = "Statin Use", y = "BMI") +
+  theme_minimal()
+```
 
 ## Conclusion
 
