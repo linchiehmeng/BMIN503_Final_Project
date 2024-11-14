@@ -283,7 +283,7 @@ final_data$CKD_n <- factor(final_data$CKD_n, levels = c(0, 1), labels = c("No Ch
 
 1.  **Explore the characteristics of individuals under 60 with sarcopenia**
 
-Baseline characteristics of participants with or without sarcopenia
+The baseline characteristics of the study participants, without applying weights, are presented stratified by sarcopenia status below. Of the 2,251 participants, 452 (20.1%) had sarcopenia, while 1,799 (79.9%) did not.
 
 ```{r}
 # Create table and plots to show the characteristics stratified by sarcopenia status
@@ -318,6 +318,14 @@ ggplot(final_data, aes(x = as.factor(sarcopenia), y = BMI, fill = as.factor(sarc
   theme_minimal()
 ```
 
+The weighted baseline characteristics of the NHANES study population are presented below, stratified by sarcopenia status. The gender distribution was similar across groups, with around 51% of both sarcopenic and non-sarcopenic participants being female. Age distribution showed slight differences; those with sarcopenia had a higher proportion of individuals in the younger age group (20-29 years) at 31.9%, compared to 27.1% in those without sarcopenia. Additionally, the average BMI was significantly lower in participants with sarcopenia (23.53) than those without (29.67).
+
+Racial composition also varied between the groups. Non-Hispanic White individuals represented the largest proportion in both groups, but they were more common among those without sarcopenia (58.0%) compared to those with sarcopenia (51.3%).
+
+For health and lifestyle factors, high physical activity was more frequent in participants without sarcopenia (30.9%) than those with sarcopenia (26.3%). Alcohol use was also higher among non-sarcopenic individuals (93.6% vs. 87.3%), while smoking was more common among sarcopenic participants (55.4% vs. 48.6%).
+
+However, among health conditions, hypertension, hyperlipidemia, cardiovascular disease, and diabetes were more prevalent in the non-sarcopenic group. For instance, hypertension was reported by 23.3% of non-sarcopenic participants compared to 14.7% of those with sarcopenia. The prevalence of chronic kidney disease and statin use was relatively low and similar between groups.
+
 ```{r}
 # Create weighted Table 1 to show the characteristics stratified by sarcopenia status
 survey_design <- svydesign(ids = ~1, data = final_data, weights = ~exam_weight)
@@ -335,7 +343,7 @@ print(table1_weight, quote = FALSE, noSpaces = TRUE)
 
 2.  **Examine the characteristics of individuals under 60 using statins**
 
-Baseline characteristic of participants with or without using statins
+The figures of baseline characteristics of the study participants, without applying weights, are presented stratified by statins use below.
 
 ```{r}
 #Create plots to show the characteristics stratified by statins use status
@@ -365,6 +373,14 @@ ggplot(final_data, aes(x = statin_use, y = BMI, fill = statin_use)) +
   theme_minimal()
 ```
 
+The following table presents the baseline characteristics of participants stratified by statin use, weighted to reflect a distribution more representative of the U.S. population. Among the weighted participants, those not using statins constitute the majority, compared to statin users. Gender distribution shows that a higher percentage of females are not on statins (52.0%) compared to those using statins (34.2%).
+
+In terms of age, statin use is highest in the 50-59 age group (76.0%) among statin users, whereas younger age groups (20-29 and 30-39 years) have lower statin use rates (1.2% and 6.6%, respectively). Racial distribution indicates that non-Hispanic Whites are the largest racial group among both statin users (54.0%) and non-users (57.1%).
+
+Participants' income and education levels are relatively similar between groups. Physical activity levels are notably higher in non-users (30.8%) than users (19.1%), while alcohol use is slightly more common among statin users (93.3%) than non-users (92.5%).
+
+A higher prevalence of walking difficulty (12.6%), hypertension (55.9%), hyperlipidemia (83.1%), cardiovascular disease (34.3%), diabetes (37.1%), and chronic kidney disease (5.4%) is observed in statin users, suggesting that statin users are generally less healthy and have more comorbidities than non-users.
+
 ```{r}
 # Create weighted Table 2 to show the characteristics stratified by statins use status
 table2_weight <- svyCreateTableOne(
@@ -379,6 +395,8 @@ print(table2_weight, quote = FALSE, noSpaces = TRUE)
 ```
 
 3.  **Evaluate whether statin use impacts muscle health in younger adults**
+
+    Below, I used logistic regression with a forest plot to show the association between statin use and sarcopenia, applying the weights. The results indicate that patients using statins have an OR of 0.71 (95% CI 0.39-1.37) for sarcopenia. Although this association is not statistically significant, there is a trend suggesting a reduced association between statin use and sarcopenia.
 
 ```{r}
 #Building logistic regressoin model considering examine weight of NHANES
@@ -408,6 +426,8 @@ forestplot(
   txt_gp = fpTxtGp(label = gpar(fontsize = 6))
 )
 ```
+
+After adjusting for potential confounders, the logistic regression analysis showed an OR of 0.84 (95% CI 0.38-1.84) for the association between statin use and the risk of sarcopenia.
 
 ```{r}
 #Building adjusted logistic regressoin models considering examine weight of NHANES
@@ -442,7 +462,13 @@ forestplot(
 
 ## Conclusion
 
-This the conclusion. The @sec-results can be invoked here.
+To the best of my knowledge, this is the first cross-sectional study to explore the characteristics of individuals under 60 with sarcopenia, examine the characteristics of individuals under 60 using statins, and evaluate whether statin use impacts muscle health in younger adults. Overall, I found that younger individuals with sarcopenia were more likely to be in the youngest age group (20-29 years), engage less frequently in high physical activity, smoke, and have fewer comorbidities. Comparing statin users to non-users, I observed that statin users were more likely to be in the older age group (50-59 years), have a higher prevalence of walking difficulties, and experience more comorbidities. Logistic regression analysis indicated a non-statistically significant reduction in the risk of sarcopenia among statin users, even after adjusting for numerous potential confounders.
+
+Interestingly, statin use in this sample was consistently associated with a lower likelihood of sarcopenia. Although this result was unexpected, it aligns with a recent cross-sectional study focusing on heart failure patients aged 18 and older (11), which found that statin use was inversely associated with sarcopenia, with an OR of 0.03 (95% CI 0.01-0.30). A possible explanation for this potential protective effect of statins may be related to their circulatory benefits, which could positively impact neuromuscular function and help preserve muscle strength, quantity, and quality.
+
+However, there are some important limitations to consider. First, this was a cross-sectional study, which does not allow for causal inference. Second, our sample size of around 2,000 participants is relatively small and may lack sufficient statistical power. Third, we defined sarcopenia as having an appendicular muscle mass in the lowest 20% within each age group and gender. While this algorithm is widely used in older populations, its validity has not been established in younger populations, as in our study. Future studies with longitudinal follow-up are needed to assess the association between statin use and sarcopenia risk to better inform clinical practice in younger populations.
+
+In conclusion, although the findings were contrary to expectations, this study suggests that patients taking statins were less likely to be sarcopenic. Further studies are warranted to investigate the mechanisms and causal relationships involved in this association.
 
 ## References
 
@@ -456,3 +482,4 @@ This the conclusion. The @sec-results can be invoked here.
 8.  Stone NJ, Smith SC Jr, Orringer CE, et al. Managing Atherosclerotic Cardiovascular Risk in Young Adults: JACC State-of-the-Art Review. *J Am Coll Cardiol*. 2022;79(8):819-836.
 9.  Zhang X, Chen Z, Fang A, et al. Trends in prevalence, risk factor control and medications in atherosclerotic cardiovascular disease among US Adults, 1999-2018. *Am J Prev Cardiol*. 2024;17:100634.
 10. Jung HN, Jung CH, Hwang YC. Sarcopenia in youth. *Metabolism*. 2023;144:155557.
+11. Valdiviesso R, Sousa-Santos AR, Azevedo LF, et al. Statins are associated with reduced likelihood of sarcopenia in a sample of heart failure outpatients: a cross-sectional study. *BMC Cardiovasc Disord*. 2022;22(1):356.
