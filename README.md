@@ -1,19 +1,10 @@
-# BMIN503/EPID600 Final Project
+# BMIN503/EPID600 Final Project-Lin-Chieh Meng
 
-This repository contains templates for the final written report and GitHub repository. Follow the instructions below to clone this repository, and then turn in your final project's code via a pull request to this repository.
+This repository contains my final project titled "Association of Statin Use with Sarcopenia in Adults Under 60: A Cross-Sectional Study."
 
-1. To start, **fork** this BMIN503_Final_Project repository.
-1. **Clone** the forked repository to your computer.
-1. Modify the files provided, add your own, and **commit** changes to complete your final project.
-1. **Push**/sync the changes up to your GitHub account.
-1. Create a **pull request** on this, the original BMIN503_Final_Project, repository to turn in your final project.
+In this repository, you can find two files:
 
+1. final_project_Meng.qmd : This file contains the R code for the entire project, including database access (using the "nhanesA" package), data cleaning processes, baseline characteristics description, and logistic regression analysis to explore the association between statin use and the occurrence of sarcopenia.
 
-Follow the instructions [here][forking] if you are unsure what the above steps mean.
-
-DUE DATE FOR FINAL VERSION: 12/13/24 11:59PM. This is a hard deadline. Turn in whatever you have by this date.
-
-
-<!-- Links -->
-[forking]: https://guides.github.com/activities/forking/
+2. final_project_Meng.html : This file is the output of my final project, presenting the results tables and figures.
 
